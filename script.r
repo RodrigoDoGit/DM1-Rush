@@ -1,23 +1,31 @@
-```r
+# Load necessary libraries
 library(dplyr)
+library(writexl)
+library(openxlsx)
 
-account <- read.csv("account.csv", sep = ";")
-card_dev <- read.csv("card_dev.csv", sep = ";")
-client <- read.csv("client.csv", sep = ";")
-disp <- read.csv("disp.csv", sep = ";")
-district <- read.csv("district.csv", sep = ";")
-loan_dev <- read.csv("loan_dev.csv", sep = ";")
-trans_dev <- read.csv("trans_dev.csv", sep = ";")
+# Set the path for datasets
+datasets_path = "datasets/"
 
+# Read datasets into separate data frames
+account <- read.csv(paste0(datasets_path, "account.csv"), sep = ";")
+card_dev <- read.csv(paste0(datasets_path, "card_dev.csv"), sep = ";")
+client <- read.csv(paste0(datasets_path, "client.csv"), sep = ";")
+disp <- read.csv(paste0(datasets_path, "disp.csv"), sep = ";")
+district <- read.csv(paste0(datasets_path, "district.csv"), sep = ";")
+loan_dev <- read.csv(paste0(datasets_path, "loan_dev.csv"), sep = ";")
+trans_dev <- read.csv(paste0(datasets_path, "trans_dev.csv"), sep = ";")
+
+# Check and print the count of missing values in each dataset
 missing_values <- sapply(list(account, card_dev, client, disp, district, loan_dev, trans_dev), function(df) sum(is.na(df)))
-
 cat("Missing Values Summary:\n")
 print(missing_values)
 
+# Convert date columns to Date format
 account$date <- as.Date(account$date, format = "%y%m%d")
 loan_dev$date <- as.Date(loan_dev$date, format = "%y%m%d")
 trans_dev$date <- as.Date(trans_dev$date, format = "%y%m%d")
 
+# Display summary statistics for each dataset
 summary(account)
 summary(card_dev)
 summary(client)
@@ -26,47 +34,63 @@ summary(district)
 summary(loan_dev)
 summary(trans_dev)
 
+# Remove duplicate rows in disp and trans_dev datasets
 disp <- unique(disp)
 trans_dev <- unique(trans_dev)
 
+# Merge datasets step by step using left joins
 merged_data_step1 <- account %>%
   left_join(card_dev, by = c("account_id" = "disp_id"))
-
-str(merged_data_step1)
 
 merged_data_step2 <- merged_data_step1 %>%
   left_join(disp, by = "account_id")
 
-str(merged_data_step2)
-
-
 merged_data_step3 <- merged_data_step2 %>%
   left_join(client, by = "client_id")
 
-str(merged_data_step3)
+# Rename the "code" column in district to avoid naming conflicts
 colnames(district)[colnames(district) == "code"] <- "district_id_district"
 
 merged_data_step4 <- merged_data_step3 %>%
   left_join(district, by = c("district_id.x" = "district_id_district"))
 
-str(merged_data_step4)
-
 merged_data_step5 <- merged_data_step4 %>%
   left_join(loan_dev, by = "account_id")
 
-str(merged_data_step5)
-
-merged_data <- merged_data_step5 %>%
+# Merge the final dataset with trans_dev using many-to-many relationship
+dados <- merged_data_step5 %>%
   left_join(trans_dev, by = "account_id", suffix = c("_merged", "_trans"), relationship = "many-to-many")
 
+# Display the structure of the final merged dataset
+str(dados)
 
+# Eliminated this column because it was the same than client_id but less general
+dados <- dados[,-c(8)]
 
-str(merged_data)
+# Remove the columns that have a NAs percentage above the threshold
+remove_high_missing_features <- function(data, threshold) {
+  # Calculate the threshold for missing values
+  max_missing_values <- nrow(data) * threshold
+  
+  # Identify columns with more missing values than the threshold
+  high_missing_columns <- colnames(data)[apply(data, 2, function(x) sum(is.na(x)) > max_missing_values)]
+  
+  # Remove high missing value columns from the dataset
+  data <- data[, setdiff(colnames(data), high_missing_columns)]
+  
+  return(data)
+}
 
+dados <- remove_high_missing_features(dados, 0.75)
 
-cleaned_data <- merged_data %>%
+# Exportar dados para Excel
+write_xlsx(dados, path = paste0(datasets_path,"dados_finais.xlsx"))
+
+# Remove duplicate rows based on the account_id column
+cleaned_data <- dados %>%
   distinct(account_id, .keep_all = TRUE)
 
+# Check for duplicate values in the account_id column of the cleaned data frame
 duplicated_cleaned_data <- cleaned_data$account_id[duplicated(cleaned_data$account_id)]
 if (length(duplicated_cleaned_data) > 0) {
   cat("Duplicate values found in account_id column of the cleaned data frame.\n")
@@ -76,4 +100,34 @@ if (length(duplicated_cleaned_data) > 0) {
   cat("No duplicate values found in account_id column of the cleaned data frame.\n")
 }
 
-```
+binary <- function(data,minRange,maxRange,name){
+  for(n in minRange:maxRange){
+    flag <- 0
+    mat = matrix(0,length(data),1)
+    for(i in 1:length(data)){
+      if(data[i] == n){
+        mat[i,1] = 1
+        flag <- 1
+      }
+      else{
+        mat[i,1] = 0
+      }
+    }
+    colnames(mat)[1] = paste(name,'_',n)
+    if(n == minRange){
+      amostra <- mat
+    }
+    else if(flag == 1){
+      amostra <-cbind(amostra,mat)
+    }
+  }
+  return(amostra)
+}
+
+binarizer <- function(data,name){
+  minRange <- min(data)
+  maxRange <- max(data)
+  return(binary(data,minRange,maxRange,name))
+}
+
+
