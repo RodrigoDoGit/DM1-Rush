@@ -21,9 +21,11 @@ cat("Missing Values Summary:\n")
 print(missing_values)
 
 # Convert date columns to Date format
-account$date <- as.Date(account$date, format = "%y%m%d")
-loan_dev$date <- as.Date(loan_dev$date, format = "%y%m%d")
-trans_dev$date <- as.Date(trans_dev$date, format = "%y%m%d")
+account$date <- as.Date(sprintf("19%s", account$date), format = "%Y%m%d")
+loan_dev$date <- as.Date(sprintf("19%s", loan_dev$date), format = "%Y%m%d")
+trans_dev$date <- as.Date(sprintf("19%s", trans_dev$date), format = "%Y%m%d")
+card_dev$date <- as.Date(sprintf("19%s", card_dev$issued), format = "%Y%m%d")
+client$date <- as.Date(sprintf("19%s", client$birth_number), format = "%Y%m%d")
 
 # Display summary statistics for each dataset
 summary(account)
@@ -100,34 +102,61 @@ if (length(duplicated_cleaned_data) > 0) {
   cat("No duplicate values found in account_id column of the cleaned data frame.\n")
 }
 
-binary <- function(data,minRange,maxRange,name){
-  for(n in minRange:maxRange){
-    flag <- 0
-    mat = matrix(0,length(data),1)
-    for(i in 1:length(data)){
-      if(data[i] == n){
-        mat[i,1] = 1
-        flag <- 1
-      }
-      else{
-        mat[i,1] = 0
-      }
-    }
-    colnames(mat)[1] = paste(name,'_',n)
-    if(n == minRange){
-      amostra <- mat
-    }
-    else if(flag == 1){
-      amostra <-cbind(amostra,mat)
-    }
+# -------------------
+# LINEARIZATION
+# -------------------
+
+# Binarization Function
+convert_to_binary_columns <- function(data, cat_col) {
+  # Make sure the specified column exists in the data frame
+  if (!(cat_col %in% names(data))) {
+    stop("Specified column does not exist in the data frame.")
   }
-  return(amostra)
+  
+  # Get unique values in the specified column
+  unique_values <- unique(data[[cat_col]])
+  
+  # Create a placeholder for new columns
+  new_columns <- data.frame(matrix(NA, ncol = 0, nrow = nrow(data)))
+  
+  # Check if unique_values is empty
+  if (length(unique_values) == 0) {
+    warning("No unique values found in ", cat_col)
+    return(data)
+  }
+  
+  # Iterate over unique values and create binary columns
+  for (value in unique_values) {
+    # Create a binary column for each unique value
+    binary_column_name <- paste(cat_col, value, sep = "_")
+    binary_column_name <- gsub(" ", "_", binary_column_name)  # Replace spaces with underscores
+    binary_column_name <- gsub(" - ", "-", binary_column_name)  # Replace " - " with "-"
+    new_columns[binary_column_name] <- as.integer(data[[cat_col]] == value)
+  }
+  
+  # Remove the original categorical column
+  data <- data[, !(names(data) %in% cat_col)]
+  
+  # Insert new columns at the end of the data frame
+  data <- cbind(data, new_columns)
+  
+  return(data)
+}
+    
+# Apply binarization to relevant categorical columns
+columns_to_binarize <- colnames(dados)[sapply(dados, is.character)]
+
+columns_to_binarize <- columns_to_binarize[sapply(columns_to_binarize, function(col) n_distinct(dados[[col]]) > 1)]
+
+for (col in columns_to_binarize) {
+  dados <- convert_to_binary_columns(dados, col)
 }
 
-binarizer <- function(data,name){
-  minRange <- min(data)
-  maxRange <- max(data)
-  return(binary(data,minRange,maxRange,name))
-}
+# Identify the position of the "account" column
+account_col_index <- which(names(dados) == "account")
 
+# Move the "account" column to the end
+dados <- dados[, c(setdiff(seq_along(dados), account_col_index), account_col_index)]
 
+# Display the structure of the modified dataset
+str(dados)
