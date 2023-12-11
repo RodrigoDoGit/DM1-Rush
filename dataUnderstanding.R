@@ -49,8 +49,8 @@ filtered_combined_correlation_data <- rbind(filtered_positive_correlation_data, 
 filtered_combined_correlation_data <- filtered_combined_correlation_data[order(-abs(filtered_combined_correlation_data$Correlation)), ]
 
 # Get correlations
-top_30_correlations <- head(filtered_combined_correlation_data, 30)
-print(top_30_correlations)
+top_25_correlations <- head(filtered_combined_correlation_data, 25)
+print(top_25_correlations)
 
 # ------------------------------
 # PRINCIPAL COMPONENT ANALYSIS
