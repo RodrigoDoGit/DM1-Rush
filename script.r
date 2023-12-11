@@ -2,6 +2,7 @@
 library(dplyr)
 library(writexl)
 library(openxlsx)
+library(ggplot2)
 
 # Set the path for datasets
 datasets_path = "datasets/"
@@ -103,7 +104,7 @@ remove_high_missing_features <- function(data, threshold) {
 dados <- remove_high_missing_features(dados, 0.75)
 
 # Exportar dados para Excel
-write_xlsx(dados, path = paste0(datasets_path,"dados_finais.xlsx"))
+# write_xlsx(dados, path = paste0(datasets_path,"dados_finais.xlsx"))
 
 # Remove duplicate rows based on the account_id column
 cleaned_data <- dados %>%
@@ -181,64 +182,4 @@ for (col in colnames(dados)){
 # Identify the position of the "account" column and move it to the end, since it is the evaluation feature 
 account_col_index <- which(names(dados) == "account")
 dados <- dados[, c(setdiff(seq_along(dados), account_col_index), account_col_index)]
-
-# ------------------------------
-# CORRELATION MATRIX EVALUATION
-# ------------------------------
-
-# Identify numeric columns in the dataset
-numeric_columns <- sapply(dados, is.numeric)
-
-# Create a numeric matrix from numeric columns
-numeric_matrix <- dados[, numeric_columns]
-
-# Calculate the correlation matrix
-cor_matrix <- cor(numeric_matrix)
-
-# Find significant positive correlations
-positive_correlations <- which(cor_matrix >= 0.5 & cor_matrix != 1, arr.ind = TRUE)
-
-# Create a data frame to store correlation information
-correlation_data <- data.frame(
-  Variable1 = colnames(cor_matrix)[positive_correlations[, 1]],
-  Variable2 = colnames(cor_matrix)[positive_correlations[, 2]],
-  Correlation = cor_matrix[positive_correlations],
-  stringsAsFactors = FALSE
-)
-
-# Ensure only one of each pair is included
-correlation_data <- subset(correlation_data, Variable1 < Variable2)
-
-# Order the data frame by correlation in descending order
-correlation_data <- correlation_data[order(-correlation_data$Correlation), ]
-
-# Display the top 20 positive correlations
-top_20_positive_correlations <- head(correlation_data, 20)
-print(top_20_positive_correlations)
-
-# Find significant positive correlations
-negative_correlations <- which(cor_matrix <= -0.5 & cor_matrix != 1, arr.ind = TRUE)
-
-# Create a data frame to store correlation information
-correlation_data <- data.frame(
-  Variable1 = colnames(cor_matrix)[negative_correlations[, 1]],
-  Variable2 = colnames(cor_matrix)[negative_correlations[, 2]],
-  Correlation = cor_matrix[negative_correlations],
-  stringsAsFactors = FALSE
-)
-
-# Ensure only one of each pair is included
-correlation_data <- subset(correlation_data, Variable1 < Variable2)
-
-# Order the data frame by correlation in descending order
-correlation_data <- correlation_data[order(correlation_data$Correlation), ]
-
-# Display the top 20 negative correlations
-top_20_negative_correlations <- head(correlation_data, 20)
-print(top_20_negative_correlations)
-
-
-
-
-
 
