@@ -1,8 +1,10 @@
 # Load necessary libraries
+library(tidyverse)
 library(dplyr)
 library(writexl)
 library(openxlsx)
 library(ggplot2)
+library(lubridate)
 
 # Set the path for datasets
 datasets_path = "datasets/"
@@ -183,3 +185,25 @@ for (col in colnames(dados)){
 account_col_index <- which(names(dados) == "account")
 dados <- dados[, c(setdiff(seq_along(dados), account_col_index), account_col_index)]
 
+# Remove date columns
+date_columns <- sapply(dados, is.Date)
+dados <- dados[, !date_columns]
+
+# Remove rows with missing values
+dados <- na.omit(dados)
+
+# Identify constant columns
+constant_columns <- colnames(dados)[apply(dados, 2, function(col) length(unique(col)) == 1)]
+
+# Remove constant columns from the dataset
+dados <- dados[, -which(colnames(dados) %in% constant_columns)]
+
+
+# --------------------------
+# CLEAN TEMPORARY VARIABLES
+# --------------------------
+# Since the main goal of the last procedures was to generate the dataframe,
+# it can be erased everything temporary past this, for efficiency sake
+rm(list=setdiff(ls(), "dados"))
+# Clear Unused R Memory
+gc()
