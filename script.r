@@ -123,6 +123,18 @@ if (length(duplicated_cleaned_data) > 0) {
   cat("No duplicate values found in account_id column of the cleaned data frame.\n")
 }
 
+#Function to convert categorical collumns into numeric
+convertToNumeric <- function(data, columns) {
+  for (col in columns) {
+    data[[col]] <- as.numeric(as.character(data[[col]]))
+  }
+  return(data)
+}
+# Numeric variables assigned as categorical
+cat_to_num <- c('unemploymant.rate..95', 'no..of.commited.crimes..95')
+# Convert them to numeric
+dados <- convertToNumeric(dados, cat_to_num)
+
 # -------------------
 # BINARIZATION
 # -------------------
@@ -197,7 +209,6 @@ constant_columns <- colnames(dados)[apply(dados, 2, function(col) length(unique(
 
 # Remove constant columns from the dataset
 dados <- dados[, -which(colnames(dados) %in% constant_columns)]
-
 
 # --------------------------
 # CLEAN TEMPORARY VARIABLES

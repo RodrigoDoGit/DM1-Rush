@@ -16,41 +16,41 @@ cor_matrix <- cor(numeric_matrix)
 # Find significant positive correlations
 positive_correlations <- which(cor_matrix >= 0.5 & cor_matrix != 1, arr.ind = TRUE)
 
-# Create a data frame to store positive correlation information
-positive_correlation_data <- data.frame(
-  Variable1 = colnames(cor_matrix)[positive_correlations[, 1]],
-  Variable2 = colnames(cor_matrix)[positive_correlations[, 2]],
-  Correlation = cor_matrix[positive_correlations],
-  stringsAsFactors = FALSE
-)
-
-# Ensure only one of each pair is included
-positive_correlation_data <- subset(positive_correlation_data, Variable1 < Variable2)
-
 # Find significant negative correlations
 negative_correlations <- which(cor_matrix <= -0.5 & cor_matrix != 1, arr.ind = TRUE)
 
-# Create a data frame to store negative correlation information
-negative_correlation_data <- data.frame(
-  Variable1 = colnames(cor_matrix)[negative_correlations[, 1]],
-  Variable2 = colnames(cor_matrix)[negative_correlations[, 2]],
-  Correlation = cor_matrix[negative_correlations],
-  stringsAsFactors = FALSE
-)
+# Filter out correlations with the same prefix up until the underscore
+filter_correlations <- function(correlation_data) {
+  correlation_data <- data.frame(
+    Variable1 = colnames(cor_matrix)[correlation_data[, 1]],
+    Variable2 = colnames(cor_matrix)[correlation_data[, 2]],
+    Correlation = cor_matrix[correlation_data],
+    stringsAsFactors = FALSE
+  )
+  
+  # Ensure only one of each pair is included
+  correlation_data <- subset(correlation_data, Variable1 < Variable2)
+  
+  # Filter out correlations with the same prefix
+  correlation_data <- correlation_data[!grepl("^\\w+_", correlation_data$Variable1) |
+                                         !grepl("^\\w+_", correlation_data$Variable2), ]
+  
+  return(correlation_data)
+}
 
-# Ensure only one of each pair is included
-negative_correlation_data <- subset(negative_correlation_data, Variable1 < Variable2)
+# Create filtered positive and negative correlation data
+filtered_positive_correlation_data <- filter_correlations(positive_correlations)
+filtered_negative_correlation_data <- filter_correlations(negative_correlations)
 
-# Combine positive and negative correlation data
-combined_correlation_data <- rbind(positive_correlation_data, negative_correlation_data)
+# Combine filtered positive and negative correlation data
+filtered_combined_correlation_data <- rbind(filtered_positive_correlation_data, filtered_negative_correlation_data)
 
 # Order the data frame by the absolute value of correlation in descending order
-combined_correlation_data <- combined_correlation_data[order(-abs(combined_correlation_data$Correlation)), ]
+filtered_combined_correlation_data <- filtered_combined_correlation_data[order(-abs(filtered_combined_correlation_data$Correlation)), ]
 
-# Display the top 50 correlations
-top_100_correlations <- head(combined_correlation_data, 100)
-print(top_100_correlations)
-
+# Get correlations
+top_30_correlations <- head(filtered_combined_correlation_data, 30)
+print(top_30_correlations)
 
 # ------------------------------
 # PRINCIPAL COMPONENT ANALYSIS
