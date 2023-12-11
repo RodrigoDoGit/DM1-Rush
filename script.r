@@ -103,7 +103,7 @@ if (length(duplicated_cleaned_data) > 0) {
 }
 
 # -------------------
-# LINEARIZATION
+# BINARIZATION
 # -------------------
 
 # Binarization Function
@@ -145,18 +145,82 @@ convert_to_binary_columns <- function(data, cat_col) {
     
 # Apply binarization to relevant categorical columns
 columns_to_binarize <- colnames(dados)[sapply(dados, is.character)]
-
 columns_to_binarize <- columns_to_binarize[sapply(columns_to_binarize, function(col) n_distinct(dados[[col]]) > 1)]
 
+# Execute the linearization
 for (col in columns_to_binarize) {
   dados <- convert_to_binary_columns(dados, col)
 }
 
-# Identify the position of the "account" column
-account_col_index <- which(names(dados) == "account")
+# Clean features generated with solely Missing Values or of Data variables, 
+# since they will not influence the predictions and pattern finding of the study of the dataset
+for (col in colnames(dados)){
+  if(class(dados$col)=="Data" || all(is.na(dados[[col]]))){
+    dados <- dados[, !colnames(dados) %in% col]
+  }
+}
 
-# Move the "account" column to the end
+# Identify the position of the "account" column and move it to the end, since it is the evaluation feature 
+account_col_index <- which(names(dados) == "account")
 dados <- dados[, c(setdiff(seq_along(dados), account_col_index), account_col_index)]
 
-# Display the structure of the modified dataset
-str(dados)
+# ------------------------------
+# CORRELATION MATRIX EVALUATION
+# ------------------------------
+
+# Identify numeric columns in the dataset
+numeric_columns <- sapply(dados, is.numeric)
+
+# Create a numeric matrix from numeric columns
+numeric_matrix <- dados[, numeric_columns]
+
+# Calculate the correlation matrix
+cor_matrix <- cor(numeric_matrix)
+
+# Find significant positive correlations
+positive_correlations <- which(cor_matrix >= 0.5 & cor_matrix != 1, arr.ind = TRUE)
+
+# Create a data frame to store correlation information
+correlation_data <- data.frame(
+  Variable1 = colnames(cor_matrix)[positive_correlations[, 1]],
+  Variable2 = colnames(cor_matrix)[positive_correlations[, 2]],
+  Correlation = cor_matrix[positive_correlations],
+  stringsAsFactors = FALSE
+)
+
+# Ensure only one of each pair is included
+correlation_data <- subset(correlation_data, Variable1 < Variable2)
+
+# Order the data frame by correlation in descending order
+correlation_data <- correlation_data[order(-correlation_data$Correlation), ]
+
+# Display the top 20 positive correlations
+top_20_positive_correlations <- head(correlation_data, 20)
+print(top_20_positive_correlations)
+
+# Find significant positive correlations
+negative_correlations <- which(cor_matrix <= -0.5 & cor_matrix != 1, arr.ind = TRUE)
+
+# Create a data frame to store correlation information
+correlation_data <- data.frame(
+  Variable1 = colnames(cor_matrix)[negative_correlations[, 1]],
+  Variable2 = colnames(cor_matrix)[negative_correlations[, 2]],
+  Correlation = cor_matrix[negative_correlations],
+  stringsAsFactors = FALSE
+)
+
+# Ensure only one of each pair is included
+correlation_data <- subset(correlation_data, Variable1 < Variable2)
+
+# Order the data frame by correlation in descending order
+correlation_data <- correlation_data[order(correlation_data$Correlation), ]
+
+# Display the top 20 negative correlations
+top_20_negative_correlations <- head(correlation_data, 20)
+print(top_20_negative_correlations)
+
+
+
+
+
+
