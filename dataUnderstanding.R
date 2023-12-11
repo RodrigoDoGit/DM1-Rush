@@ -99,7 +99,7 @@ if (sum(non_constant_columns) > 0) {
   # --------------
   # CLUSTER GEN
   # --------------
-    
+  
   df <- as.data.frame(pc$x)
   df <- scale(df)
   
