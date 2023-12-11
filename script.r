@@ -15,7 +15,18 @@ district <- read.csv(paste0(datasets_path, "district.csv"), sep = ";")
 loan_dev <- read.csv(paste0(datasets_path, "loan_dev.csv"), sep = ";")
 trans_dev <- read.csv(paste0(datasets_path, "trans_dev.csv"), sep = ";")
 
-# Check and print the count of missing values in each dataset
+ggplot(trans_dev, aes(x = amount)) +
+  geom_histogram(binwidth = 100, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Transaction Amounts (before outlier removal)",
+       x = "Transaction Amount",
+       y = "Frequency")
+
+Q1 <- quantile(trans_dev$amount, 0.25)
+Q3 <- quantile(trans_dev$amount, 0.75)
+IQR <- Q3 - Q1
+upper_limit <- Q3 + 1.5 * IQR
+trans_dev <- trans_dev[trans_dev$amount <= upper_limit, ]
+
 missing_values <- sapply(list(account, card_dev, client, disp, district, loan_dev, trans_dev), function(df) sum(is.na(df)))
 cat("Missing Values Summary:\n")
 print(missing_values)
@@ -35,6 +46,12 @@ summary(disp)
 summary(district)
 summary(loan_dev)
 summary(trans_dev)
+                         
+ggplot(trans_dev, aes(x = amount)) +
+  geom_histogram(binwidth = 100, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Transaction Amounts (Outliers Removed)",
+       x = "Transaction Amount",
+       y = "Frequency")
 
 # Remove duplicate rows in disp and trans_dev datasets
 disp <- unique(disp)
@@ -93,7 +110,8 @@ cleaned_data <- dados %>%
   distinct(account_id, .keep_all = TRUE)
 
 # Check for duplicate values in the account_id column of the cleaned data frame
-duplicated_cleaned_data <- cleaned_data$account_id[duplicated(cleaned_data$account_id)]
+duplicated_cleaned_data <- cleaned_data$account_id[!is.na(cleaned_data$account_id) & duplicated(cleaned_data$account_id)]
+
 if (length(duplicated_cleaned_data) > 0) {
   cat("Duplicate values found in account_id column of the cleaned data frame.\n")
   print(duplicated_cleaned_data)
