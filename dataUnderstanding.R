@@ -1,3 +1,5 @@
+library(tidyverse)
+
 # ------------------------------
 # CORRELATION MATRIX EVALUATION
 # ------------------------------
@@ -68,6 +70,9 @@ numeric_matrix <- sampled_data[, sapply(sampled_data, is.numeric)]
 non_constant_columns <- sapply(numeric_matrix, function(col) length(unique(col)) > 1)
 numeric_matrix <- numeric_matrix[, non_constant_columns]
 
+# Empty dataframe to to store the clustering algos in the future
+df <- data.frame()
+
 # Check if there are still numeric columns remaining
 if (sum(non_constant_columns) > 0) {
   # Handle missing values by imputing with column means
@@ -91,9 +96,18 @@ if (sum(non_constant_columns) > 0) {
   # Plot scree plot
   plot(pc)
   
+  # --------------
+  # CLUSTER GEN
+  # --------------
+    
+  df <- as.data.frame(pc$x)
+  df <- scale(df)
+  
 } else {
   warning("No non-constant numeric columns remaining after removing constant columns.")
 }
 
+# The clustering Algos Dataframe!
+print(df)
 
 
